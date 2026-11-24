@@ -1,0 +1,60 @@
+flowchart LR
+  user["Operator browser - Next.js console"]
+
+  subgraph app["Next.js App Router on Vercel"]
+    ui["UI pages - overview, live events, Customer 360, transactions, audit search, semantic, DLQ, simulator"]
+    simApi["/api/simulator and /api/simulator/tick"]
+    adminApi["/api/admin - seed batches and ensure indexes"]
+    readApi["/api/dashboard, /api/events, /api/customers, /api/transactions"]
+    searchApi["/api/search/filter, /api/search/text, /api/search/vector"]
+    dlqApi["/api/dlq"]
+    sim["Topic simulator - lib/de/simulator.ts"]
+    ingest["Validation and idempotent ingest - lib/de/ingest.ts"]
+    queries["Aggregation pipelines - lib/de/queries.ts"]
+    search["Search and vector search - lib/de/search.ts"]
+    dlq["DLQ retry logic - lib/de/dlq.ts"]
+    store["Store - lib/de/store.ts"]
+    mem["In-memory engine via mingo - LOCAL DEMO"]
+  end
+
+  subgraph atlas["MongoDB Atlas - digital_euro_demo"]
+    onb[("onboardingEvents")]
+    off[("offboardingEvents")]
+    dean[("deanAssignments")]
+    ntf[("notificationEvents")]
+    dle[("deadLetterEvents")]
+    idx["de_text Search and de_vector Vector Search indexes"]
+  end
+
+  gateway["Vercel AI Gateway - embeddings"]
+
+  user --> ui
+  ui --> simApi
+  ui --> adminApi
+  ui --> readApi
+  ui --> searchApi
+  ui --> dlqApi
+  simApi --> sim
+  adminApi --> ingest
+  sim --> ingest
+  dlqApi --> dlq
+  dlq --> ingest
+  readApi --> queries
+  searchApi --> queries
+  searchApi --> search
+  ingest --> store
+  queries --> store
+  search --> store
+  ingest --> gateway
+  search --> gateway
+  store --> mem
+  store --> onb
+  store --> off
+  store --> dean
+  store --> ntf
+  store --> dle
+  idx --- onb
+  idx --- off
+  idx --- dean
+  idx --- ntf
+  idx --- dle

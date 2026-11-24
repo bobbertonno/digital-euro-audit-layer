@@ -1,0 +1,216 @@
+{
+  "schemaVersion": "1.0",
+  "name": "Digital Euro | Operations & Audit Intelligence",
+  "slug": "digital-euro-audit-layer",
+  "tagline": "MongoDB Atlas as the operational Single View and unified audit layer for a simulated Digital Euro event architecture.",
+  "description": "A Next.js operations console that persists five simulated Kafka-style event topics into five MongoDB collections and builds Customer 360 views, transaction state timelines, structured audit search, full-text search, semantic search and dead-letter recovery from those documents. It runs against MongoDB Atlas when MONGODB_URI is set, or uses an in-memory engine that runs the same aggregation pipelines through mingo.",
+  "businessProblem": "Digital Euro operations produce separate event streams for onboarding, offboarding, DEAN assignment and transactions, outbound notifications, and processing errors. When those streams sit in different stores, reconstructing a customer journey or investigating a failed transaction requires a separate reporting database. This demo shows how a document model, cross-collection aggregation ($unionWith, $lookup, $setWindowFields) and MongoDB Search and Vector Search provide one operational view for audit investigation and error recovery. All data is fictional. The demo does not claim regulatory compliance, exactly-once delivery or production SLAs.",
+  "category": "Financial Services Operations",
+  "industry": "Financial Services",
+  "useCases": [
+    "Customer 360 single view",
+    "Event audit trail",
+    "Transaction state history",
+    "Dead-letter queue recovery",
+    "Operational full-text search",
+    "Semantic incident investigation"
+  ],
+  "authors": [
+    {
+      "name": "bobbertonno",
+      "github": "bobbertonno"
+    }
+  ],
+  "tags": [
+    "mongodb",
+    "atlas",
+    "digital-euro",
+    "banking",
+    "event-driven",
+    "audit",
+    "single-view",
+    "search",
+    "vector-search",
+    "dead-letter-queue"
+  ],
+  "technologies": [
+    "Next.js",
+    "React",
+    "TypeScript",
+    "Node.js",
+    "MongoDB Node.js Driver",
+    "Tailwind CSS",
+    "shadcn/ui",
+    "Recharts",
+    "SWR",
+    "Zod",
+    "mingo",
+    "Vercel AI SDK",
+    "Vercel AI Gateway",
+    "Vercel"
+  ],
+  "mongodbCapabilities": [
+    {
+      "id": "atlas",
+      "name": "MongoDB Atlas persistence",
+      "description": "When MONGODB_URI is set, the app connects to Atlas with the official driver and persists events to five collections in a dedicated demo database. Reset and seed refuse any database whose name does not contain 'demo'. Without MONGODB_URI, an in-memory engine is used instead.",
+      "implementation": "Verified implementation",
+      "evidence": [
+        "lib/de/store.ts",
+        "lib/de/config.ts",
+        "lib/de/capabilities.ts",
+        "app/api/health/route.ts"
+      ]
+    },
+    {
+      "id": "crud",
+      "name": "Idempotent append-only ingestion",
+      "description": "Events are validated with Zod and checked against state-transition rules, then written with insertMany (ordered: false) behind a unique eventId index, so duplicates are detected rather than overwritten. DLQ management metadata and measured ingestion latency are updated with updateOne and bulk writes. Original business events are never modified.",
+      "implementation": "Verified implementation",
+      "evidence": [
+        "lib/de/ingest.ts",
+        "lib/de/store.ts",
+        "lib/de/domain.ts",
+        "lib/de/dlq.ts"
+      ]
+    },
+    {
+      "id": "aggregation",
+      "name": "Cross-collection aggregation pipelines",
+      "description": "Dashboard KPIs, Customer 360, transaction timelines and the unified audit stream are built with $unionWith across the five collections, $group/$last for latest-state reconstruction, $facet for paged search, $lookup to find settled transactions without delivered notifications, and $setWindowFields/$shift for previous and next states.",
+      "implementation": "Verified implementation",
+      "evidence": [
+        "lib/de/queries.ts",
+        "app/api/dashboard/route.ts",
+        "components/de/customer-detail-view.tsx",
+        "components/de/transaction-detail-view.tsx",
+        "app/api/search/filter/route.ts"
+      ]
+    },
+    {
+      "id": "mongodb-search",
+      "name": "MongoDB Search (full-text)",
+      "description": "Creates a de_text Search index on each collection over descriptions, error messages, failure reasons and transition reasons. Runs $search with highlighting on each selected collection and merges the results by normalized score. When the index is missing, the app shows a clearly labeled keyword fallback.",
+      "implementation": "Verified implementation",
+      "evidence": [
+        "lib/de/search.ts",
+        "lib/de/indexes.ts",
+        "app/api/search/text/route.ts",
+        "components/de/audit-search-view.tsx"
+      ]
+    },
+    {
+      "id": "vector-search",
+      "name": "Atlas Vector Search",
+      "description": "Embeddings come from the AI SDK through Vercel AI Gateway (default openai/text-embedding-3-small, 256 dimensions) and are stored in an embedding field inside the existing five collections. Queries run $vectorSearch on the de_vector index per collection, and multi-event conditions are then confirmed with deterministic correlation queries. Without embedding credentials, vector search is turned off and the reason is shown.",
+      "implementation": "Verified implementation",
+      "evidence": [
+        "lib/de/search.ts",
+        "lib/de/embeddings.ts",
+        "lib/de/indexes.ts",
+        "app/api/search/vector/route.ts",
+        "components/de/semantic-search-view.tsx"
+      ]
+    },
+    {
+      "id": "kafka",
+      "name": "Simulated Kafka topics",
+      "description": "Five logical topics (onboarding-events, offboarding-events, dean-assignment, notification-outbound, error-dead-letter) are simulated, with partitions and offsets labeled as simulated. No Kafka or GCP Pub/Sub broker is integrated. Events are generated on request through /api/simulator/tick.",
+      "implementation": "Illustrative",
+      "evidence": [
+        "lib/de/simulator.ts",
+        "lib/de/domain.ts",
+        "app/api/simulator/tick/route.ts",
+        "components/de/simulator-view.tsx"
+      ]
+    },
+    {
+      "id": "change-streams",
+      "name": "Change Streams (production option)",
+      "description": "Described on the architecture page as a production option for push-based downstream processing. The demo itself refreshes with SWR polling and does not open a change stream.",
+      "implementation": "Illustrative",
+      "evidence": [
+        "components/de/architecture-view.tsx"
+      ]
+    }
+  ],
+  "deployment": {
+    "local": {
+      "supported": true,
+      "command": "pnpm install && pnpm dev"
+    },
+    "atlas": {
+      "supported": true,
+      "notes": "Set MONGODB_URI (and optionally MONGODB_DATABASE, which defaults to digital_euro_demo). Then use Event Simulator > Reset and Seed Demo, which seeds in bounded batches, and Ensure indexes, which creates secondary indexes plus the de_text and de_vector search indexes. Search and Vector Search indexes build asynchronously."
+    },
+    "docker": {
+      "supported": false
+    }
+  },
+  "configuration": [
+    {
+      "name": "MONGODB_URI",
+      "description": "MongoDB Atlas connection string. If unset, the app runs in LOCAL DEMO mode with an in-memory engine. Server-side only.",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "MONGODB_DATABASE",
+      "description": "Target database. Defaults to digital_euro_demo. Destructive reset only runs when the name contains 'demo'.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "DEMO_MODE",
+      "description": "Labels the environment as DEMO. Defaults to true.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "DEMO_ADMIN_TOKEN",
+      "description": "When set, simulator, DLQ and admin mutations require the x-demo-admin-token header. Recommended for public deployments.",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "AI_GATEWAY_API_KEY",
+      "description": "Vercel AI Gateway key for generating embeddings on a local machine. On Vercel, OIDC authentication is automatic.",
+      "required": false,
+      "secret": true
+    },
+    {
+      "name": "EMBEDDING_MODEL",
+      "description": "AI Gateway embedding model id. Defaults to openai/text-embedding-3-small.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "EMBEDDING_DIMENSIONS",
+      "description": "Embedding dimensions. Defaults to 256. Must match numDimensions of the de_vector index.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "ATLAS_SEARCH_INDEX",
+      "description": "MongoDB Search index name. Defaults to de_text.",
+      "required": false,
+      "secret": false
+    },
+    {
+      "name": "ATLAS_VECTOR_INDEX",
+      "description": "Atlas Vector Search index name. Defaults to de_vector.",
+      "required": false,
+      "secret": false
+    }
+  ],
+  "architecture": {
+    "documentation": "demo-hub/architecture.md",
+    "diagram": "demo-hub/diagrams/architecture.mmd",
+    "overview": "Simulated event producers feed a Zod validation and state-transition pipeline. The pipeline writes idempotently to five MongoDB collections. Next.js route handlers run aggregation, $search and $vectorSearch pipelines over those collections to drive the dashboard, Customer 360, transaction explorer, audit search, semantic investigation and DLQ console."
+  },
+  "documentation": {
+    "readme": "README.md",
+    "installation": "README.md"
+  },
+  "maturity": "prototype"
+}
