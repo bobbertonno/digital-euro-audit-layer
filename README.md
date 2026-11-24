@@ -2,6 +2,8 @@
 
 Powered by MongoDB Atlas — Unified Event Intelligence.
 
+## Overview
+
 A Next.js demo that uses MongoDB Atlas as the operational Single View and unified audit layer for a simulated Digital Euro event-driven architecture. Five simulated Kafka topics (GCP Pub/Sub compatible architecture) map to exactly five MongoDB collections:
 
 | Simulated topic | Collection |
@@ -14,68 +16,90 @@ A Next.js demo that uses MongoDB Atlas as the operational Single View and unifie
 
 No customer, transaction, vector or materialized-view collection exists. Customer 360, transaction timelines and the unified audit stream are assembled with `$unionWith`, `$group`/`$last` and application-side correlation.
 
+Demo Hub metadata (MongoDB Demo Hub standard v1.0) lives in [`demo-hub/`](demo-hub/):
+
+- [`demo-hub/manifest.json`](demo-hub/manifest.json): catalog metadata, capabilities with evidence, and configuration
+- [`demo-hub/architecture.md`](demo-hub/architecture.md): components, data flow, collections and indexes
+- [`demo-hub/diagrams/architecture.mmd`](demo-hub/diagrams/architecture.mmd): Mermaid architecture diagram
+
+## Features
+
+- **Executive Overview.** KPIs and charts computed from the five collections, with unique transactions counted by latest state.
+- **Live Event Monitor.** Auto-refreshing event table with filters, a JSON viewer and correlated timelines.
+- **Customer 360.** One chronological timeline across all five collections, with each event tagged by its source collection.
+- **Transaction & State Explorer.** Full state history with previous and next state (`$setWindowFields`), related notifications and errors.
+- **Unified Audit Search.** Combined structured filters, pagination and saved investigations.
+- **Full-text search.** `$search` per collection with highlighting, plus a clearly labeled fallback.
+- **Semantic Investigation.** `$vectorSearch` over real embeddings, with deterministic correlation checks.
+- **Dead Letter Management.** Inspect, investigate, retry (re-runs ingestion) and discard, with a retry audit trail.
+- **Event Simulator.** Request-triggered generation for five simulated topics, deterministic scenarios, and Reset and Seed.
+- **Guided Demo** and an **Architecture & MongoDB Value** page.
+
 ## Modes
 
 | Badge | Meaning |
 |---|---|
 | LOCAL DEMO | No `MONGODB_URI`. An in-memory engine runs the **same aggregation pipelines** (via mingo) over a deterministic ~10,000-document seed. Resets on cold start. |
-| ATLAS CONNECTED | `MONGODB_URI` is set; all reads/writes go to the five Atlas collections in `MONGODB_DATABASE`. |
-| ATLAS SEARCH AVAILABLE | The `de_text` Search index exists; full-text uses `$search` per collection, merged with normalized scores. Otherwise a clearly labeled keyword fallback is used. |
-| ATLAS VECTOR SEARCH AVAILABLE | The `de_vector` index exists; semantic search uses `$vectorSearch`. In local mode, exact cosine k-NN runs over the same real embeddings. If embeddings cannot be generated, vector search is disabled with an explanation — keyword matching is never presented as vector search. |
+| ATLAS CONNECTED | `MONGODB_URI` is set. All reads and writes go to the five Atlas collections in `MONGODB_DATABASE`. |
+| ATLAS SEARCH AVAILABLE | The `de_text` Search index exists. Full-text search uses `$search` per collection, merged with normalized scores. Otherwise a clearly labeled keyword fallback is used. |
+| ATLAS VECTOR SEARCH AVAILABLE | The `de_vector` index exists, and semantic search uses `$vectorSearch`. In local mode, exact cosine k-NN runs over the same real embeddings. If embeddings cannot be generated, vector search is turned off with an explanation. Keyword matching is never presented as vector search. |
 
-## Environment variables
-
-| Variable | Required | Notes |
-|---|---|---|
-| `MONGODB_URI` | for Atlas | Atlas connection string. Server-side only. |
-| `MONGODB_DATABASE` | no | Defaults to `digital_euro_demo`. Reset only ever touches the five collections in this database. |
-| `DEMO_MODE` | no | `true` (default) labels the environment DEMO. |
-| `DEMO_ADMIN_TOKEN` | public deployments | When set, simulator, DLQ and admin mutations require header `x-demo-admin-token`. Enter it once on the Event Simulator page. |
-| `AI_GATEWAY_API_KEY` | for vector search locally | Embeddings are generated through Vercel AI Gateway. On Vercel, authentication is automatic (OIDC). On a local machine, provide a key or pull the OIDC token (see below). The gateway's embedding models need paid credits. |
-| `EMBEDDING_MODEL` | no | Defaults to `openai/text-embedding-3-small`. |
-| `EMBEDDING_DIMENSIONS` | no | Defaults to `256`. Must match the `numDimensions` of the Atlas vector index; re-seed and re-create indexes if you change it. |
-| `ATLAS_SEARCH_INDEX` | no | Defaults to `de_text`. |
-| `ATLAS_VECTOR_INDEX` | no | Defaults to `de_vector`. |
-
-## Running on a local machine
-
-### 1. Prerequisites
+## Prerequisites
 
 - **Node.js 20.9 or later** (Next.js 16 requirement; Node 22 or 24 LTS recommended). Check with `node -v`.
 - **pnpm**. The repo pins pnpm through the `packageManager` field in `package.json`, so the simplest option is Corepack, which ships with Node:
   ```bash
   corepack enable
   ```
-  Alternatively install pnpm globally: `npm install -g pnpm`.
+  Alternatively, install pnpm globally:
+  ```bash
+  npm install -g pnpm
+  ```
 - **Git**, to clone the repository.
 - Optional: a **MongoDB Atlas** cluster (for ATLAS CONNECTED mode) and a **Vercel AI Gateway** key (for semantic search).
 
-### 2. Get the code
+## Installation
 
-Either download the ZIP from v0 (three-dot menu → Download ZIP) and unzip it, or clone the connected GitHub repository:
+Either download the ZIP from v0 (three-dot menu → Download ZIP) and unzip it, or clone the repository:
 
 ```bash
-git clone <your-repo-url> digital-euro-demo
-cd digital-euro-demo
+git clone https://github.com/bobbertonno/digital-euro-audit-layer.git
+cd digital-euro-audit-layer
 ```
 
-### 3. Install dependencies
+Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-### 4. Configure environment variables
+## Configuration
 
-Create a file named `.env.local` in the project root. Next.js loads it automatically; it is git-ignored and never sent to the browser.
+### Environment variables
 
-**Option A — LOCAL DEMO (no external services).** You can skip the file entirely, or create it with:
+| Variable | Required | Notes |
+|---|---|---|
+| `MONGODB_URI` | for Atlas | Atlas connection string. Server-side only. |
+| `MONGODB_DATABASE` | no | Defaults to `digital_euro_demo`. Reset only touches the five collections in this database, and refuses any database whose name does not contain `demo`. |
+| `DEMO_MODE` | no | `true` (default) labels the environment DEMO. |
+| `DEMO_ADMIN_TOKEN` | public deployments | When set, simulator, DLQ and admin mutations require the header `x-demo-admin-token`. Enter it once on the Event Simulator page. |
+| `AI_GATEWAY_API_KEY` | for vector search locally | Embeddings are generated through Vercel AI Gateway. On Vercel, authentication is automatic (OIDC). On a local machine, provide a key or pull the OIDC token (see below). The gateway's embedding models need paid credits. |
+| `EMBEDDING_MODEL` | no | Defaults to `openai/text-embedding-3-small`. |
+| `EMBEDDING_DIMENSIONS` | no | Defaults to `256`. Must match the `numDimensions` of the Atlas vector index. If you change it, re-seed and re-create the indexes. |
+| `ATLAS_SEARCH_INDEX` | no | Defaults to `de_text`. |
+| `ATLAS_VECTOR_INDEX` | no | Defaults to `de_vector`. |
+
+### `.env.local`
+
+Create a file named `.env.local` in the project root. Next.js loads it automatically. It is git-ignored and never sent to the browser.
+
+**Option A: LOCAL DEMO (no external services).** You can skip the file entirely, or create it with:
 
 ```bash
 DEMO_MODE=true
 ```
 
-**Option B — ATLAS CONNECTED.**
+**Option B: ATLAS CONNECTED.**
 
 ```bash
 MONGODB_URI="mongodb+srv://<user>:<password>@<cluster>.mongodb.net/?retryWrites=true&w=majority"
@@ -85,11 +109,7 @@ DEMO_MODE=true
 # DEMO_ADMIN_TOKEN=choose-a-long-random-string
 ```
 
-In Atlas, also make sure that:
-- your machine's IP address is allowed under **Network Access** (or temporarily allow `0.0.0.0/0` for a demo cluster);
-- the database user in the URI has `readWrite` on `MONGODB_DATABASE` (and `dbAdmin` so the app can create search indexes).
-
-**Optional — enable semantic (vector) search locally.** Add one of:
+**Optional: enable semantic (vector) search locally.** Add one of the following:
 
 ```bash
 # a) An AI Gateway API key (Vercel dashboard → AI Gateway → API Keys)
@@ -106,9 +126,11 @@ vercel env pull .env.local   # writes VERCEL_OIDC_TOKEN (expires after ~12h; re-
 
 Note: `vercel env pull` overwrites `.env.local`, so re-add any variables you wrote by hand (or pull first, then append them).
 
-Without embedding credentials the app still runs; the Semantic Investigation page shows vector search as disabled with the reason, and never substitutes keyword matching.
+Without embedding credentials the app still runs. The Semantic Investigation page shows vector search as turned off, with the reason, and never substitutes keyword matching.
 
-### 5. Start the development server
+## Running locally
+
+Start the development server:
 
 ```bash
 pnpm dev
@@ -117,51 +139,63 @@ pnpm dev
 Open http://localhost:3000. It redirects to **Executive Overview**.
 
 - **LOCAL DEMO:** the deterministic ~10,000-document seed loads into memory on the first request (a few seconds). Data resets whenever the dev server restarts.
-- **ATLAS CONNECTED:** the collections start empty. Go to **Event Simulator → Reset and Seed Demo**, confirm, wait for the batch progress to finish, then click **Ensure indexes** (see "Connecting MongoDB Atlas" below). Data persists across restarts.
+- **ATLAS CONNECTED:** see [Running against MongoDB Atlas](#running-against-mongodb-atlas) to seed the collections and create indexes.
 
-The header badges show which mode is active (LOCAL DEMO / ATLAS CONNECTED / ATLAS SEARCH AVAILABLE / ATLAS VECTOR SEARCH AVAILABLE). `GET http://localhost:3000/api/health` returns the same information as JSON.
+The header badges show which mode is active (LOCAL DEMO / ATLAS CONNECTED / ATLAS SEARCH AVAILABLE / ATLAS VECTOR SEARCH AVAILABLE). The health endpoint returns the same information as JSON:
 
-### 6. Production build (optional)
+```bash
+curl http://localhost:3000/api/health
+```
 
-To run the optimized build locally:
+To run the optimized production build locally:
 
 ```bash
 pnpm build
 pnpm start
 ```
 
-This serves on http://localhost:3000 as well. Use a different port with `pnpm start -p 4000` (or `pnpm dev -p 4000`).
+This also serves on http://localhost:3000. To use a different port:
 
-### 7. Quick smoke test
+```bash
+pnpm dev -p 4000
+# or
+pnpm start -p 4000
+```
+
+### Quick smoke test
 
 1. **Executive Overview** shows non-zero KPIs and charts.
-2. **Event Simulator → Start simulation**; switch to **Live Event Monitor** and watch new rows arrive (keep a browser tab open — ticks are driven by the open console).
-3. **Guided Demo** (header) walks through all five presenter steps, including the Scenario D notification retry on **Dead Letter Management**.
+2. Click **Event Simulator → Start simulation**, then switch to **Live Event Monitor** and watch new rows arrive. Keep a browser tab open, because ticks are driven by the open console.
+3. **Guided Demo** (in the header) walks through all five presenter steps, including the Scenario D notification retry on **Dead Letter Management**.
 
-### Troubleshooting
+## Running against MongoDB Atlas
+
+1. Create an Atlas cluster. M10+ is recommended for Search and Vector Search; M0 works for structured queries.
+2. In Atlas, make sure that:
+   - your machine's IP address is allowed under **Network Access** (or temporarily allow `0.0.0.0/0` for a demo cluster);
+   - the database user in the URI has `readWrite` on `MONGODB_DATABASE`, plus `dbAdmin` so the app can create search indexes.
+3. Set `MONGODB_URI` (and optionally `MONGODB_DATABASE`) in `.env.local` for local runs, or in Vercel → Project → Settings → Environment Variables for deployments. Restart `pnpm dev` after editing env files.
+4. The collections start empty. Open **Event Simulator → Reset and Seed Demo** and confirm. The console seeds in bounded batches (`/api/admin` `seed-batch`), so no single serverless request exceeds time limits. Wait for the batch progress to finish.
+5. Click **Ensure indexes**. This creates:
+   - a unique `eventId` index per collection; `customerId+timestamp`, `correlationId+timestamp`, `transactionId+timestamp`, `eventType+timestamp`, `status+timestamp`, `payload.errorCode+timestamp`, `ingestedAt`
+   - a `de_text` MongoDB Search index per collection
+   - a `de_vector` Vector Search index per collection, with `numDimensions` taken from `EMBEDDING_DIMENSIONS`
+6. Search indexes build asynchronously. The header badges update once Atlas reports them as queryable. Data persists across restarts.
+
+## Troubleshooting
 
 | Symptom | Fix |
 |---|---|
 | `pnpm: command not found` | Run `corepack enable`, or `npm install -g pnpm`. |
 | Corepack reports a pnpm version error | Run `corepack prepare pnpm@latest --activate`, or install pnpm globally and run `pnpm install` again. |
-| `Port 3000 is in use` | Next.js picks the next free port automatically; use the URL printed in the terminal, or stop the other process. |
-| Header shows LOCAL DEMO although `MONGODB_URI` is set | The variable must be in `.env.local` in the project root; restart `pnpm dev` after editing env files. |
-| `MongoServerSelectionError` / connection timeout | Your IP is not on the Atlas Network Access list, or a VPN/firewall blocks port 27017. |
-| `bad auth` / authentication failed | Check username/password in the URI; URL-encode special characters in the password. |
-| Full-text search shows "keyword fallback" | Atlas Search indexes are still building, or **Ensure indexes** was not run. Wait until the header badge turns on. |
-| Vector search disabled with an auth or credits message | Set `AI_GATEWAY_API_KEY` or refresh the OIDC token with `vercel env pull`, and make sure the AI Gateway account has credits. |
-| Simulator buttons return 401 | `DEMO_ADMIN_TOKEN` is set; enter the same value on the Event Simulator page. |
-
-## Connecting MongoDB Atlas
-
-1. Create an Atlas cluster (M10+ recommended for Search/Vector Search; M0 works for structured queries).
-2. Set `MONGODB_URI` (and optionally `MONGODB_DATABASE`) in Vercel → Project → Settings → Environment Variables.
-3. Open **Event Simulator → Reset and Seed Demo**. The console seeds in bounded batches (`/api/admin` `seed-batch`), so no single serverless request exceeds time limits.
-4. Click **Ensure indexes**. This creates:
-   - unique `eventId` per collection; `customerId+timestamp`, `correlationId+timestamp`, `transactionId+timestamp`, `eventType+timestamp`, `status+timestamp`, `payload.errorCode+timestamp`, `ingestedAt`
-   - `de_text` MongoDB Search index per collection
-   - `de_vector` Vector Search index per collection, with `numDimensions` taken from `EMBEDDING_DIMENSIONS`
-5. Search indexes build asynchronously. The header badges update once Atlas reports them as queryable.
+| `Port 3000 is in use` | Next.js picks the next free port automatically. Use the URL printed in the terminal, or stop the other process. |
+| Header shows LOCAL DEMO although `MONGODB_URI` is set | The variable must be in `.env.local` in the project root. Restart `pnpm dev` after editing env files. |
+| `MongoServerSelectionError` / connection timeout | Your IP is not on the Atlas Network Access list, or a VPN or firewall blocks port 27017. |
+| `bad auth` / authentication failed | Check the username and password in the URI. URL-encode special characters in the password. |
+| Full-text search shows "keyword fallback" | The Atlas Search indexes are still building, or **Ensure indexes** was not run. Wait until the header badge turns on. |
+| Vector search turned off with an auth or credits message | Set `AI_GATEWAY_API_KEY`, or refresh the OIDC token with `vercel env pull`. Make sure the AI Gateway account has credits. |
+| Simulator buttons return 401 | `DEMO_ADMIN_TOKEN` is set. Enter the same value on the Event Simulator page. |
+| Reset refuses to run | `MONGODB_DATABASE` must contain `demo` (for example `digital_euro_demo`). |
 
 ## Deploying to Vercel
 
@@ -169,7 +203,7 @@ Click **Publish** in v0, or push to GitHub and import the repository in Vercel. 
 
 ## Simulation model
 
-Vercel functions cannot run persistent intervals. While the simulator is RUNNING, the open console calls `/api/simulator/tick`, which releases events that are due for the configured rate through the same Zod validation → state-transition check → idempotent persistence pipeline. Partitions and offsets are simulated and labeled as such. Ingestion latency is measured from event creation to confirmed database write. Autonomous 24/7 streaming would need an external worker or a managed scheduler; in production, real Kafka/Pub/Sub consumers replace the simulator, and Change Streams can replace polling.
+Vercel functions cannot run persistent intervals. While the simulator is RUNNING, the open console calls `/api/simulator/tick`. Each tick releases the events that are due at the configured rate, and they go through the same pipeline as all other events: Zod validation → state-transition check → idempotent persistence. Partitions and offsets are simulated and labeled as such. Ingestion latency is measured from event creation to the confirmed database write. Autonomous 24/7 streaming would need an external worker or a managed scheduler. In production, real Kafka/Pub/Sub consumers would replace the simulator, and Change Streams could replace polling.
 
 ## Showcase scenarios (stable IDs)
 
@@ -186,4 +220,4 @@ Use **Guided Demo** in the header for the five-step presenter walkthrough.
 
 ## Not claimed
 
-This demo does not provide regulatory compliance, exactly-once delivery, or production SLAs, and does not define DEAN authoritatively. All data is fictional; monetary values are stored as integer EUR minor units.
+This demo does not provide regulatory compliance, exactly-once delivery or production SLAs, and it does not define DEAN authoritatively. All data is fictional. Monetary values are stored as integer EUR minor units.
