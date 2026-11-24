@@ -35,6 +35,18 @@ Demo Hub metadata (MongoDB Demo Hub standard v1.0) lives in [`demo-hub/`](demo-h
 - **Event Simulator.** Request-triggered generation for five simulated topics, deterministic scenarios, and Reset and Seed.
 - **Guided Demo** and an **Architecture & MongoDB Value** page.
 
+## Screenshots
+
+These were captured from the running application in **LOCAL DEMO** mode (seeded dataset, 1440×900). They're stored in [`demo-hub/screenshots/`](demo-hub/screenshots).
+
+| | |
+|---|---|
+| **Executive Overview** ![Executive Overview](demo-hub/screenshots/01-executive-overview.png) | **Live Event Monitor** ![Live Event Monitor](demo-hub/screenshots/02-live-event-monitor.png) |
+| **Customer 360 (Scenario A)** ![Customer 360 timeline for CUST-990001](demo-hub/screenshots/03-customer-360.png) | **Transaction Explorer (Scenario B)** ![Settled transaction TX-2026-990002](demo-hub/screenshots/04-transaction-explorer.png) |
+| **Rejected transaction (Scenario C)** ![Rejected transaction TX-2026-990003](demo-hub/screenshots/05-transaction-rejected.png) | **Unified Audit Search** ![Unified Audit Search](demo-hub/screenshots/06-unified-audit-search.png) |
+| **Semantic Investigation** ![Semantic Investigation](demo-hub/screenshots/07-semantic-investigation.png) | **Dead Letter Management (Scenario D)** ![Dead letter queue filtered to Scenario D](demo-hub/screenshots/08-dead-letter-scenario-d.png) |
+| **Event Simulator** ![Event Simulator](demo-hub/screenshots/09-event-simulator.png) | **Architecture & MongoDB Value** ![Architecture page](demo-hub/screenshots/10-architecture.png) |
+
 ## Modes
 
 | Badge | Meaning |
